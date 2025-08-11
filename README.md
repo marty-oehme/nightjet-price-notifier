@@ -199,6 +199,31 @@ curl 'https://www.nightjet.com/nj-booking-ocp/offer/get' \
   --data-raw '{"njFrom":8011160,"njDep":1760461680000,"njTo":8700011,"maxChanges":0,"connections":1,"filter":{"njTrain":"NJ 40424","njDeparture":1760461680000},"objects":[{"type":"person","birthDate":"1995-08-11","cards":[]}],"relations":[],"lang":"en"}'
 ```
 
+request data
+
+```json
+{
+  "njFrom": 8011160,
+  "njDep": 1760461680000,
+  "njTo": 8700011,
+  "maxChanges": 0,
+  "connections": 1,
+  "filter": {
+    "njTrain": "NJ 40424",
+    "njDeparture": 1760461680000
+  },
+  "objects": [
+    {
+      "type": "person",
+      "birthDate": "1995-08-11",
+      "cards": []
+    }
+  ],
+  "relations": [],
+  "lang": "en"
+}
+```
+
 ### booking response
 
 ```json
