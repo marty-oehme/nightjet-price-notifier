@@ -228,4 +228,5 @@ def main():
 
 
 if __name__ == "__main__":
+    Path(BASE_DIR).mkdir(exist_ok=True, parents=True)
     main()
