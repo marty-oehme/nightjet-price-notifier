@@ -1,4 +1,6 @@
 import json
+import csv
+from dataclasses import dataclass
 from pprint import pprint
 from typing import Any
 
@@ -8,6 +10,7 @@ BASE_URL = "https://www.nightjet.com"
 
 
 def dprint(txt) -> None:
+    return
     print(txt)
 
 
@@ -93,7 +96,7 @@ def request_bookings(
     token: str, booking_req: dict[str, Any], endpoint: str = "/nj-booking-ocp/offer/get"
 ) -> dict[Any, Any]:
     with open("bookings.json") as f:
-        DEBUG_BOOKINGS = json.load(f)
+        DEBUG_BOOKINGS = json.load(f)[0]
     resp_json = DEBUG_BOOKINGS
 
     # headers = {
@@ -133,13 +136,50 @@ def json_extract(obj, key):
     return values
 
 
-def extract_prices(bookings_dict: list[dict[Any, Any]]) -> dict[Any, Any]:
+@dataclass
+class Price:
+    id: str
+    name: str
+    price: float
+
+
+def extract_prices(bookings_dict: list[dict[Any, Any]]) -> list[Price]:
+    prices = []
     # .result[].connections[].offers[].reservation.reservationSegments[].compartments[].objects
     for booking in bookings_dict:
-        for r in booking["result"]:
-            for c in r["connections"]:
-                for o in c["offers"]:
-                    print(o["name"])
+        for reservation in booking["result"]:
+            for connection in reservation["connections"]:
+                for offer in connection["offers"]:
+                    for reservation in offer["reservation"]["reservationSegments"]:
+                        for compartment in reservation["compartments"]:
+                            id = compartment["externalIdentifier"]
+                            name = compartment["name"]["en"]
+                            # filter undesired compartments
+                            if id in ["sideCorridorCoach_2"]:
+                                continue
+                            # print all compartment identifiers w/ full name
+                            # dprint(f"{id}: {name}")
+
+                            # only keep those with a price (i.e. bookable?)
+                            if "objects" not in compartment:
+                                continue
+                            price = compartment["objects"][0]["price"]
+                            prices.append(Price(id, name, price))
+    return prices
+
+
+def get_lowest_price(prices: list[Price]) -> Price:
+    lowest = Price("", "", 10000000.0)
+    for p in prices:
+        if p.price < lowest.price:
+            lowest = p
+    return lowest
+
+CSV_LOWEST_FILE="lowest.csv"
+def add_to_csv(price: Price) -> None:
+    with open(CSV_LOWEST_FILE, "a") as f:
+        writer = csv.writer(f)
+        writer.writerow([price.id, price.price, price.name])
 
 
 def main():
@@ -147,7 +187,11 @@ def main():
     connections = request_connections(token)
     booking_requests = connection_data_to_booking_requests(connections)
     bookings = [request_bookings(token, req) for req in booking_requests]
-    dprint(extract_prices(bookings))
+    prices = extract_prices(bookings)
+
+    lowest = get_lowest_price(prices)
+    add_to_csv(lowest)
+    # dprint(extract_prices(bookings))
 
 
 if __name__ == "__main__":
