@@ -11,6 +11,7 @@ BASE_URL = "https://www.nightjet.com"
 BASE_DIR = "out"
 CSV_LOWEST_FILE = f"{BASE_DIR}/lowest.csv"
 CSV_ALL_PRICES_PATTERN = f"{BASE_DIR}/%%DATE%%_all_prices.csv"
+NOTIFICATION_CHANNEL="nightjet-price-notifier"
 
 
 def dprint(txt) -> None:
@@ -226,7 +227,7 @@ def main():
     # if the price changed, add it to lowest prices
     if not previous or new.price != previous.price:
         dprint(f"PRICE CHANGE. {previous} -> {new}")
-        notify_user(previous or Price("", "", 0.0), new, "alerta-alerta-pichi-133")
+        notify_user(previous or Price("", "", 0.0), new, NOTIFICATION_CHANNEL)
         add_to_csv(new)
 
 
