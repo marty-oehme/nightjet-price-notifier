@@ -133,12 +133,13 @@ def json_extract(obj, key):
     return values
 
 
-def extract_prices(bookings_dict: dict[Any, Any]) -> dict[Any, Any]:
+def extract_prices(bookings_dict: list[dict[Any, Any]]) -> dict[Any, Any]:
     # .result[].connections[].offers[].reservation.reservationSegments[].compartments[].objects
-    for r in bookings_dict[0][0][0]["result"]:
-        for c in r["connections"]:
-            for o in c["offers"]:
-                print(o["name"])
+    for booking in bookings_dict:
+        for r in booking["result"]:
+            for c in r["connections"]:
+                for o in c["offers"]:
+                    print(o["name"])
 
 
 def main():
