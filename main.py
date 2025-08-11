@@ -10,11 +10,11 @@ import requests
 BASE_URL = "https://www.nightjet.com"
 BASE_DIR = "out"
 CSV_LOWEST_FILE = f"{BASE_DIR}/lowest.csv"
-CSV_ALL_PRICES_SUFFIX = f"{BASE_DIR}/_all_prices.csv"
+CSV_ALL_PRICES_PATTERN = f"{BASE_DIR}/%%DATE%%_all_prices.csv"
 
 
 def dprint(txt) -> None:
-    print(txt)
+    print(f"{datetime.now()}: {txt}")
 
 
 def request_init_token(endpoint: str = "/nj-booking-ocp/init/start") -> str:
@@ -170,7 +170,10 @@ def get_lowest_price(prices: list[Price]) -> Price:
 
 
 def dump_all_prices_to_csv(prices: list[Price]) -> None:
-    with open(f"{int(datetime.now().timestamp())}{CSV_ALL_PRICES_SUFFIX}", "w") as f:
+    fname = CSV_ALL_PRICES_PATTERN.replace(
+        "%%DATE%%", str(int(datetime.now().timestamp()))
+    )
+    with open(fname, "w") as f:
         writer = csv.writer(f)
         writer.writerow(["id", "price", "name"])
         writer.writerows([[price.id, price.price, price.name] for price in prices])
