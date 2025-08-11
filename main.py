@@ -207,6 +207,16 @@ def get_last_price_from_csv() -> Price | None:
         return Price(last[0], last[2], float(last[1]))
 
 
+def notify_user(previous: Price, new: Price, channel: str) -> None:
+    requests.post(
+        f"https://ntfy.sh/{channel}",
+        data=f"from {previous.price} -> {new.price} ({new.name})",
+        headers={
+            "Title": f"Nightjet train price went {'down' if new.price < previous.price else 'up'}",
+            "Priority": "urgent" if new.price < previous.price else "default",
+            "Tags": "green_circle" if new.price < previous.price else "orange_circle",
+        },
+    )
 
 
 def main():
