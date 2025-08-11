@@ -1,6 +1,8 @@
-import json
 import csv
+import json
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from pprint import pprint
 from typing import Any
 
@@ -175,11 +177,36 @@ def get_lowest_price(prices: list[Price]) -> Price:
             lowest = p
     return lowest
 
-CSV_LOWEST_FILE="lowest.csv"
-def add_to_csv(price: Price) -> None:
-    with open(CSV_LOWEST_FILE, "a") as f:
+
+CSV_LOWEST_FILE = "lowest.csv"
+CSV_ALL_PRICES_SUFFIX = "_all_prices.csv"
+
+
+def dump_all_prices_to_csv(prices: list[Price]) -> None:
+    with open(f"{int(datetime.now().timestamp())}{CSV_ALL_PRICES_SUFFIX}", "w") as f:
         writer = csv.writer(f)
-        writer.writerow([price.id, price.price, price.name])
+        writer.writerow(["id", "price", "name"])
+        writer.writerows([[price.id, price.price, price.name] for price in prices])
+
+
+def add_to_csv(price: Price) -> None:
+    if not Path(CSV_LOWEST_FILE).is_file():
+        with open(CSV_LOWEST_FILE, "w") as f:
+            csv.writer(f).writerow(["id", "price", "name"])
+
+    with open(CSV_LOWEST_FILE, "a") as f:
+        csv.writer(f).writerow([price.id, price.price, price.name])
+
+
+def get_last_price_from_csv() -> Price | None:
+    if not Path(CSV_LOWEST_FILE).is_file():
+        return
+
+    with open(CSV_LOWEST_FILE) as f:
+        last = next(reversed(list(csv.reader(f))))
+        return Price(last[0], last[2], float(last[1]))
+
+
 
 
 def main():
@@ -189,9 +216,18 @@ def main():
     bookings = [request_bookings(token, req) for req in booking_requests]
     prices = extract_prices(bookings)
 
-    lowest = get_lowest_price(prices)
-    add_to_csv(lowest)
-    # dprint(extract_prices(bookings))
+    # create a snapshot of all current prices
+    dump_all_prices_to_csv(prices)
+
+    # extract the lowest and the last lowest price
+    new = get_lowest_price(prices)
+    previous = get_last_price_from_csv()
+
+    # if the price changed, add it to lowest prices
+    if not previous or new.price != previous.price:
+        print(f"PRICE CHANGE. {previous} -> {new}")
+        notify_user(previous or Price("", "", 0.0), new, "alerta-alerta-pichi-133")
+        add_to_csv(new)
 
 
 if __name__ == "__main__":
