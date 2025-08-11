@@ -61,7 +61,7 @@ def request_connections(
 TRAVELLER_BIRTHDATE = "2000-07-15"  # TODO: randomize a little
 
 
-def connection_data_to_booking_requests(connections):
+def connection_data_to_booking_requests(connections) -> list[dict[str, Any]]:
     b_requests = []
     for c in connections:
         train = c["trains"][0]
@@ -83,35 +83,70 @@ def connection_data_to_booking_requests(connections):
             "lang": "en",
         }
         b_requests.append(req)
+        dprint(
+            f"Crafted booking request {c['from']['name']} -> {c['to']['name']}: {train['departure']['local']}-{train['arrival']['local']}."
+        )
     return b_requests
 
 
 def request_bookings(
     token: str, booking_req: dict[str, Any], endpoint: str = "/nj-booking-ocp/offer/get"
 ) -> dict[Any, Any]:
-    headers = {
-        "Accept": "application/json",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Content-Type": "application/json",
-        "Referer": "https://www.nightjet.com/en/ticket-buchen/",
-        "Origin": "https://www.nightjet.com",
-        "x-token": token,
-        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
-    }
-    resp_json = requests.post(
-        f"{BASE_URL}{endpoint}", headers=headers, data=json.dumps(booking_req)
-    ).json()
+    with open("bookings.json") as f:
+        DEBUG_BOOKINGS = json.load(f)
+    resp_json = DEBUG_BOOKINGS
+
+    # headers = {
+    #     "Accept": "application/json",
+    #     "Accept-Language": "en-US,en;q=0.5",
+    #     "Content-Type": "application/json",
+    #     "Referer": "https://www.nightjet.com/en/ticket-buchen/",
+    #     "Origin": "https://www.nightjet.com",
+    #     "x-token": token,
+    #     "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:139.0) Gecko/20100101 Firefox/139.0",
+    # }
+    # resp_json = requests.post(
+    #     f"{BASE_URL}{endpoint}", headers=headers, data=json.dumps(booking_req)
+    # ).json()
+    # dprint(f"Requested prices ({booking_req["njFrom"]} -> {booking_req["njTo"]} at {booking_req["njDep"]}).")
     return resp_json
 
 
-def get_prices(bookings_dict: dict[Any, Any]) -> dict[Any, Any]: ...
+def json_extract(obj, key):
+    """Recursively fetch values from nested JSON."""
+    arr = []
+
+    def extract(obj, arr, key):
+        """Recursively search for values of key in JSON tree."""
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if isinstance(v, (dict, list)):
+                    extract(v, arr, key)
+                elif k == key:
+                    arr.append(v)
+        elif isinstance(obj, list):
+            for item in obj:
+                extract(item, arr, key)
+        return arr
+
+    values = extract(obj, arr, key)
+    return values
+
+
+def extract_prices(bookings_dict: dict[Any, Any]) -> dict[Any, Any]:
+    # .result[].connections[].offers[].reservation.reservationSegments[].compartments[].objects
+    for r in bookings_dict[0][0][0]["result"]:
+        for c in r["connections"]:
+            for o in c["offers"]:
+                print(o["name"])
 
 
 def main():
     token = request_init_token()
     connections = request_connections(token)
     booking_requests = connection_data_to_booking_requests(connections)
-    dprint(request_bookings(token, booking_requests[0]))
+    bookings = [request_bookings(token, req) for req in booking_requests]
+    dprint(extract_prices(bookings))
 
 
 if __name__ == "__main__":
