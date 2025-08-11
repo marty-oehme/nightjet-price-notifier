@@ -3,16 +3,17 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from pprint import pprint
 from typing import Any
 
 import requests
 
 BASE_URL = "https://www.nightjet.com"
+BASE_DIR = "out"
+CSV_LOWEST_FILE = f"{BASE_DIR}/lowest.csv"
+CSV_ALL_PRICES_SUFFIX = f"{BASE_DIR}/_all_prices.csv"
 
 
 def dprint(txt) -> None:
-    return
     print(txt)
 
 
@@ -178,10 +179,6 @@ def get_lowest_price(prices: list[Price]) -> Price:
     return lowest
 
 
-CSV_LOWEST_FILE = "lowest.csv"
-CSV_ALL_PRICES_SUFFIX = "_all_prices.csv"
-
-
 def dump_all_prices_to_csv(prices: list[Price]) -> None:
     with open(f"{int(datetime.now().timestamp())}{CSV_ALL_PRICES_SUFFIX}", "w") as f:
         writer = csv.writer(f)
@@ -235,7 +232,7 @@ def main():
 
     # if the price changed, add it to lowest prices
     if not previous or new.price != previous.price:
-        print(f"PRICE CHANGE. {previous} -> {new}")
+        dprint(f"PRICE CHANGE. {previous} -> {new}")
         notify_user(previous or Price("", "", 0.0), new, "alerta-alerta-pichi-133")
         add_to_csv(new)
 
