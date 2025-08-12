@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from time import sleep
-from typing import Any
+from typing import Annotated, Any
 
 import requests
 import typer
@@ -278,13 +278,13 @@ app = typer.Typer()
 
 @app.command()
 def main(
+    travel_date: Annotated[str, typer.Argument(help="Travel day to search from. (YYYY-MM-DD)")],
     start_station: int = typer.Option(
         START_STATION, help="Departure station number. (default: Berlin Hbf)"
     ),
     end_station: int = typer.Option(
         END_STATION, help="Destination station number. (default: Paris Est)"
     ),
-    travel_date: str = typer.Option(help="Travel day to search from. (YYYY-MM-DD)"),
     notification_channel: str = typer.Option(
         NOTIFICATION_CHANNEL, help="ntfy channel to inform user on."
     ),
