@@ -11,7 +11,7 @@ BASE_URL = "https://www.nightjet.com"
 BASE_DIR = "out"
 CSV_LOWEST_FILE = f"{BASE_DIR}/lowest.csv"
 CSV_ALL_PRICES_PATTERN = f"{BASE_DIR}/%%DATE%%_all_prices.csv"
-NOTIFICATION_CHANNEL="nightjet-price-notifier"
+NOTIFICATION_CHANNEL = "nightjet-price-notifier"
 
 
 def dprint(txt) -> None:
@@ -135,6 +135,8 @@ class Price:
     id: str
     name: str
     price: float
+    dt_from: datetime
+    dt_to: datetime
 
 
 def extract_prices(bookings_dict: list[dict[Any, Any]]) -> list[Price]:
@@ -158,12 +160,28 @@ def extract_prices(bookings_dict: list[dict[Any, Any]]) -> list[Price]:
                             if "objects" not in compartment:
                                 continue
                             price = compartment["objects"][0]["price"]
-                            prices.append(Price(id, name, price))
+                            prices.append(
+                                Price(
+                                    id,
+                                    name,
+                                    price,
+                                    dt_from=datetime.strptime(
+                                        offer["validityPeriodFrom"],
+                                        "%Y-%m-%dT%H:%M:%S.%f%z",
+                                    ),
+                                    dt_to=datetime.strptime(
+                                        offer["validityPeriodTo"], "%Y-%m-%dT%H:%M:%S.%f%z"
+                                    ),
+                                )
+                            )
     return prices
 
 
+def_time = datetime.fromtimestamp(0.0)
+
+
 def get_lowest_price(prices: list[Price]) -> Price:
-    lowest = Price("", "", 10000000.0)
+    lowest = Price("", "", 10000000.0, def_time, def_time)
     for p in prices:
         if p.price < lowest.price:
             lowest = p
@@ -183,10 +201,18 @@ def dump_all_prices_to_csv(prices: list[Price]) -> None:
 def add_to_csv(price: Price) -> None:
     if not Path(CSV_LOWEST_FILE).is_file():
         with open(CSV_LOWEST_FILE, "w") as f:
-            csv.writer(f).writerow(["id", "price", "name"])
+            csv.writer(f).writerow(["id", "price", "ts_from", "ts_to", "name"])
 
     with open(CSV_LOWEST_FILE, "a") as f:
-        csv.writer(f).writerow([price.id, price.price, price.name])
+        csv.writer(f).writerow(
+            [
+                price.id,
+                price.price,
+                price.dt_from.timestamp(),
+                price.dt_to.timestamp(),
+                price.name,
+            ]
+        )
 
 
 def get_last_price_from_csv() -> Price | None:
@@ -195,13 +221,19 @@ def get_last_price_from_csv() -> Price | None:
 
     with open(CSV_LOWEST_FILE) as f:
         last = next(reversed(list(csv.reader(f))))
-        return Price(last[0], last[2], float(last[1]))
+        return Price(
+            id=last[0],
+            price=float(last[1]),
+            dt_from=datetime.fromtimestamp(float(last[2])),
+            dt_to=datetime.fromtimestamp(float(last[3])),
+            name=last[4],
+        )
 
 
 def notify_user(previous: Price, new: Price, channel: str) -> None:
     requests.post(
         f"https://ntfy.sh/{channel}",
-        data=f"from {previous.price} -> {new.price} ({new.name})",
+        data=f"from {previous.price} -> {new.price} ({new.name}: {new.dt_from.strftime('%Y-%m-%d %H:%M')} - {new.dt_to.strftime('%Y-%m-%d %H:%M')})",
         headers={
             "Title": f"Nightjet train price went {'down' if new.price < previous.price else 'up'}",
             "Priority": "urgent" if new.price < previous.price else "default",
@@ -227,7 +259,18 @@ def main():
     # if the price changed, add it to lowest prices
     if not previous or new.price != previous.price:
         dprint(f"PRICE CHANGE. {previous} -> {new}")
-        notify_user(previous or Price("", "", 0.0), new, NOTIFICATION_CHANNEL)
+        notify_user(
+            previous
+            or Price(
+                "",
+                "No previous price",
+                0.0,
+                datetime.fromtimestamp(0),
+                datetime.fromtimestamp(0),
+            ),
+            new,
+            NOTIFICATION_CHANNEL,
+        )
         add_to_csv(new)
 
 
