@@ -6,12 +6,17 @@ from pathlib import Path
 from typing import Any
 
 import requests
+import typer
 
 BASE_URL = "https://www.nightjet.com"
 BASE_DIR = "out"
 CSV_LOWEST_FILE = f"{BASE_DIR}/lowest.csv"
 CSV_ALL_PRICES_PATTERN = f"{BASE_DIR}/%%DATE%%_all_prices.csv"
 NOTIFICATION_CHANNEL = "nightjet-price-notifier"
+
+START_STATION = "8096003"  # BerlinHBF
+END_STATION = "8796001"  # Paris Est
+TRAVEL_DATE = "2025-10-14"
 
 
 def dprint(txt) -> None:
@@ -33,15 +38,14 @@ def request_init_token(endpoint: str = "/nj-booking-ocp/init/start") -> str:
     return token
 
 
-START_STATION = "8096003"  # BerlinHBF
-END_STATION = "8796001"  # Paris Est
-TRAVEL_DATE = "2025-10-14"
-
-
 def request_connections(
-    token: str, endpoint: str = "/nj-booking-ocp/connection"
+    token: str,
+    start_station: int,
+    end_station: int,
+    travel_date: datetime,
+    endpoint: str = "/nj-booking-ocp/connection",
 ) -> list[Any]:
-    uri = f"{BASE_URL}{endpoint}/{START_STATION}/{END_STATION}/{TRAVEL_DATE}"
+    uri = f"{BASE_URL}{endpoint}/{start_station}/{end_station}/{travel_date.strftime('%Y-%m-%d')}"
     headers = {
         "Accept": "application/json",
         "Accept-Language": "en-US,en;q=0.5",
@@ -170,7 +174,8 @@ def extract_prices(bookings_dict: list[dict[Any, Any]]) -> list[Price]:
                                         "%Y-%m-%dT%H:%M:%S.%f%z",
                                     ),
                                     dt_to=datetime.strptime(
-                                        offer["validityPeriodTo"], "%Y-%m-%dT%H:%M:%S.%f%z"
+                                        offer["validityPeriodTo"],
+                                        "%Y-%m-%dT%H:%M:%S.%f%z",
                                     ),
                                 )
                             )
@@ -242,9 +247,13 @@ def notify_user(previous: Price, new: Price, channel: str) -> None:
     )
 
 
-def main():
+def main(start_station: int, end_station: int, travel_date: datetime):
+    Path(BASE_DIR).mkdir(exist_ok=True, parents=True)
+    print(start_station, end_station, travel_date)
+    # return
+
     token = request_init_token()
-    connections = request_connections(token)
+    connections = request_connections(token, start_station, end_station, travel_date)
     booking_requests = connection_data_to_booking_requests(connections)
     bookings = [request_bookings(token, req) for req in booking_requests]
     prices = extract_prices(bookings)
@@ -274,6 +283,27 @@ def main():
         add_to_csv(new)
 
 
+## CLI
+app = typer.Typer()
+
+
+@app.command()
+def search(
+    start_station: int = typer.Option(
+        START_STATION, help="Departure station number. (default: Berlin Hbf)"
+    ),
+    end_station: int = typer.Option(
+        END_STATION, help="Destination station number. (default: Paris Est)"
+    ),
+    travel_date: str = typer.Option(help="Travel day to search from. (YYYY-MM-DD)"),
+):
+    try:
+        date_obj = datetime.strptime(travel_date, "%Y-%m-%d")
+    except ValueError:
+        typer.echo(f"Invalid date format: {travel_date}. Use YYYY-MM-DD", err=True)
+        raise typer.Exit(1)
+    main(start_station=start_station, end_station=end_station, travel_date=date_obj)
+
+
 if __name__ == "__main__":
-    Path(BASE_DIR).mkdir(exist_ok=True, parents=True)
-    main()
+    app()
