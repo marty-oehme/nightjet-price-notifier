@@ -17,6 +17,7 @@ NOTIFICATION_CHANNEL = "nightjet-price-notifier"
 
 START_STATION = "8096003"  # BerlinHBF
 END_STATION = "8796001"  # Paris Est
+TRAVELLER_BIRTHDATE = datetime(1990, 1, 1)  # TODO: could randomize a little
 
 MONITOR_FREQUENCY = 3600
 
@@ -63,10 +64,9 @@ def request_connections(
     return resp_json["connections"]
 
 
-TRAVELLER_BIRTHDATE = "2000-07-15"  # TODO: randomize a little
-
-
-def connection_data_to_booking_requests(connections) -> list[dict[str, Any]]:
+def connection_data_to_booking_requests(
+    connections, traveller_birthdate: datetime = TRAVELLER_BIRTHDATE
+) -> list[dict[str, Any]]:
     b_requests = []
     for c in connections:
         train = c["trains"][0]
@@ -82,7 +82,11 @@ def connection_data_to_booking_requests(connections) -> list[dict[str, Any]]:
                 "njDeparture": dep,  # departure time again
             },
             "objects": [  # traveller
-                {"type": "person", "birthDate": TRAVELLER_BIRTHDATE, "cards": []}
+                {
+                    "type": "person",
+                    "birthDate": traveller_birthdate.strftime("%Y-%m-%d"),
+                    "cards": [],
+                }
             ],
             "relations": [],
             "lang": "en",
@@ -262,10 +266,10 @@ def notify_user(previous: Price, new: Price, channel: str) -> None:
     )
 
 
-def query(start_station: int, end_station: int, travel_date: datetime) -> list[Price]:
+def query(start_station: int, end_station: int, travel_date: datetime, traveller_birthdate: datetime) -> list[Price]:
     token = request_init_token()
     connections = request_connections(token, start_station, end_station, travel_date)
-    booking_requests = connection_data_to_booking_requests(connections)
+    booking_requests = connection_data_to_booking_requests(connections, traveller_birthdate=traveller_birthdate)
     bookings = [request_bookings(token, req) for req in booking_requests]
     prices = extract_prices(bookings)
 
@@ -287,6 +291,7 @@ def main(
     end_station: int = typer.Option(
         END_STATION, help="Destination station number. (default: Paris Est)"
     ),
+    birthdate: str = typer.Option(TRAVELLER_BIRTHDATE.strftime("%Y-%m-%d"), help="Traveller birthdate, may be important for discounts. (YYYY-MM-DD)"),
     notification_channel: str = typer.Option(
         NOTIFICATION_CHANNEL, help="ntfy channel to inform user on."
     ),
@@ -317,14 +322,15 @@ def main(
     price_snapshot_path = base_output_directory.joinpath(price_snapshot_pattern)
 
     try:
-        date_obj = datetime.strptime(travel_date, "%Y-%m-%d")
+        travel_date_obj = datetime.strptime(travel_date, "%Y-%m-%d")
+        birth_date_obj = datetime.strptime(birthdate, "%Y-%m-%d")
     except ValueError:
-        typer.echo(f"Invalid date format: {travel_date}. Use YYYY-MM-DD", err=True)
+        typer.echo("Invalid date format. Use YYYY-MM-DD", err=True)
         raise typer.Exit(1)
 
     while True:
         prices = query(
-            start_station=start_station, end_station=end_station, travel_date=date_obj
+            start_station=start_station, end_station=end_station, travel_date=travel_date_obj, traveller_birthdate=birth_date_obj,
         )
 
         # create a snapshot of all current prices
