@@ -1,16 +1,11 @@
 [project]
-name = "nj-api"
+name = "nightjet-price-notifier"
 version = "0.1.0"
-description = "Add your description here"
+description = "Continuously monitors nightjet travel dates for price fluctuations"
 readme = "README.md"
-authors = [
-    { name = "Marty Oehme", email = "contact@martyoeh.me" }
-]
+authors = [{ name = "Marty Oehme", email = "contact@martyoeh.me" }]
 requires-python = ">=3.13"
-dependencies = [
-    "requests>=2.32.4",
-    "typer>=0.16.0",
-]
+dependencies = ["requests>=2.32.4", "typer>=0.16.0"]
 
 [project.scripts]
 nightjet = "nj_api:main"
@@ -21,3 +16,6 @@ build-backend = "hatchling.build"
 
 [tool.pyright]
 typeCheckingMode = "basic"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/nj_api"]
