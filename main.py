@@ -3,6 +3,7 @@ import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 from typing import Any
 
 import requests
@@ -16,7 +17,8 @@ NOTIFICATION_CHANNEL = "nightjet-price-notifier"
 
 START_STATION = "8096003"  # BerlinHBF
 END_STATION = "8796001"  # Paris Est
-TRAVEL_DATE = "2025-10-14"
+
+MONITOR_FREQUENCY = 3600
 
 
 def dprint(txt) -> None:
@@ -286,6 +288,14 @@ def main(
     notification_channel: str = typer.Option(
         NOTIFICATION_CHANNEL, help="ntfy channel to inform user on."
     ),
+    monitor_mode: bool = typer.Option(
+        True,
+        help="Run queries repeatedly over time. If False only runs a single query (oneshot mode).",
+    ),
+    monitor_frequency: int = typer.Option(
+        MONITOR_FREQUENCY,
+        help="How often to run price queries if in monitoring mode, in seconds.",
+    ),
     base_output_directory: Path = typer.Option(
         Path(BASE_DIR), help="Directory in which to output all result files."
     ),
@@ -309,34 +319,44 @@ def main(
     except ValueError:
         typer.echo(f"Invalid date format: {travel_date}. Use YYYY-MM-DD", err=True)
         raise typer.Exit(1)
-    prices = query(
-        start_station=start_station, end_station=end_station, travel_date=date_obj
-    )
 
-    # create a snapshot of all current prices
-    if dump_price_snapshot:
-        dump_all_prices_to_csv(prices, price_snapshot_path)
-
-    # extract the lowest and the last lowest price
-    new = get_lowest_price(prices)
-    previous = get_last_price_from_csv(lowest_prices_path)
-
-    # if the price changed, add it to lowest prices
-    if not previous or new.price != previous.price:
-        dprint(f"PRICE CHANGE. {previous} -> {new}")
-        add_to_csv(new, lowest_prices_path)
-        notify_user(
-            previous
-            or Price(
-                "",
-                "No previous price",
-                0.0,
-                datetime.fromtimestamp(0),
-                datetime.fromtimestamp(0),
-            ),
-            new,
-            notification_channel,
+    while True:
+        prices = query(
+            start_station=start_station, end_station=end_station, travel_date=date_obj
         )
+
+        # create a snapshot of all current prices
+        if dump_price_snapshot:
+            dump_all_prices_to_csv(prices, price_snapshot_path)
+
+        # extract the lowest and the last lowest price
+        new = get_lowest_price(prices)
+        previous = get_last_price_from_csv(lowest_prices_path)
+
+        # if the price changed, add it to lowest prices
+        if not previous or new.price != previous.price:
+            dprint(f"PRICE CHANGE. {previous} -> {new}")
+            add_to_csv(new, lowest_prices_path)
+            notify_user(
+                previous
+                or Price(
+                    "",
+                    "No previous price",
+                    0.0,
+                    datetime.fromtimestamp(0),
+                    datetime.fromtimestamp(0),
+                ),
+                new,
+                notification_channel,
+            )
+
+        # oneshot exit
+        if not monitor_mode:
+            break
+        dprint(
+            f"Query complete. Monitoring mode active, sleeping for {monitor_frequency} seconds..."
+        )
+        sleep(monitor_frequency)
 
 
 if __name__ == "__main__":
