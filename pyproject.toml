@@ -3,11 +3,21 @@ name = "nj-api"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
+authors = [
+    { name = "Marty Oehme", email = "contact@martyoeh.me" }
+]
 requires-python = ">=3.13"
 dependencies = [
     "requests>=2.32.4",
     "typer>=0.16.0",
 ]
+
+[project.scripts]
+nightjet = "nj_api:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.pyright]
 typeCheckingMode = "basic"

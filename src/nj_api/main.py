@@ -278,7 +278,9 @@ app = typer.Typer()
 
 @app.command()
 def main(
-    travel_date: Annotated[str, typer.Argument(help="Travel day to search from. (YYYY-MM-DD)")],
+    travel_date: Annotated[
+        str, typer.Argument(help="Travel day to search from. (YYYY-MM-DD)")
+    ],
     start_station: int = typer.Option(
         START_STATION, help="Departure station number. (default: Berlin Hbf)"
     ),
