@@ -8,7 +8,7 @@ requires-python = ">=3.13"
 dependencies = ["requests>=2.32.4", "typer>=0.16.0"]
 
 [project.scripts]
-nightjet = "nj_api:main"
+nightjet = "nj:main"
 
 [build-system]
 requires = ["hatchling"]
@@ -18,4 +18,4 @@ build-backend = "hatchling.build"
 typeCheckingMode = "basic"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/nj_api"]
+packages = ["src/nj"]

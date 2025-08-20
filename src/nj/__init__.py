@@ -1,4 +1,4 @@
-from nj_api import main as cli
+from nj import main as cli
 
 
 def main() -> None:
