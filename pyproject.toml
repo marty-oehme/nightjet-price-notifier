@@ -1,5 +1,5 @@
 [project]
-name = "nightjet-price-notifier"
+name = "nightjetter"
 version = "0.1.0"
 description = "Continuously monitors nightjet travel dates for price fluctuations"
 readme = "README.md"
