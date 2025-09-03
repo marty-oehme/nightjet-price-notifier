@@ -299,7 +299,7 @@ def query_max_booking_date(endpoint: str = "/nj-booking-ocp/init/start") -> date
 app = typer.Typer()
 
 
-@app.command()
+@app.command("query")
 def main(
     travel_date: Annotated[
         str, typer.Argument(help="Travel day to search from. (YYYY-MM-DD)")
@@ -342,6 +342,12 @@ def main(
         False, help="Check for latest currently possible booking date only."
     ),
 ):
+    """Check the (lowest) prices for a single connection.
+
+    Will run repeatedly or one-shot and query the prices for a specific connection.
+    Can be set to output all available prices or just output the lowest found.
+    Outputs will (curently) always be given as csv files.
+    """
     if latest_bookable_date:
         latest_date = query_max_booking_date()
         if not latest_date:
@@ -397,7 +403,41 @@ def main(
         if not monitor_mode:
             break
         dprint(
-            f"Query complete. Monitoring mode active, sleeping for {monitor_frequency} seconds..."
+            f"Checked for connection prices. Monitoring mode active, sleeping for {monitor_frequency} seconds..."
+        )
+        sleep(monitor_frequency)
+
+
+@app.command("lastdate")
+def latestbookable_command(
+    notification_channel: str = typer.Option(
+        NOTIFICATION_CHANNEL, help="ntfy channel to inform user on."
+    ),
+    monitor_mode: bool = typer.Option(
+        True,
+        help="Run queries repeatedly over time. If False only runs a single query (oneshot mode).",
+    ),
+    monitor_frequency: int = typer.Option(
+        MONITOR_FREQUENCY,
+        help="How often to run price queries if in monitoring mode, in seconds.",
+    ),
+):
+    """Check for the currently latest possible booking date.
+
+    Will run repeatedly or one-shot and simply query for the date that is
+    currently the _last_ day which can be selected for any booking query.
+    """
+
+    while True:
+        latest_date = query_max_booking_date()
+        if not latest_date:
+            dprint("Could not determine max bookable date.")
+        dprint(f"Latest currently bookable date: {latest_date}")
+
+        if not monitor_mode:
+            break
+        dprint(
+            f"Checked for latest bookable date. Monitoring mode active, sleeping for {monitor_frequency} seconds..."
         )
         sleep(monitor_frequency)
 
