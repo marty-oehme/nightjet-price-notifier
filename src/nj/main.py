@@ -26,7 +26,7 @@ def dprint(txt) -> None:
     print(f"{datetime.now()}: {txt}")
 
 
-def request_init_token(endpoint: str = "/nj-booking-ocp/init/start") -> str:
+def request_start(endpoint: str = "/nj-booking-ocp/init/start") -> dict:
     headers = {
         "Referer": "https://www.nightjet.com",
         "Content-Type": "application/json",
@@ -35,8 +35,11 @@ def request_init_token(endpoint: str = "/nj-booking-ocp/init/start") -> str:
     resp_json = requests.post(
         f"{BASE_URL}{endpoint}", data=json.dumps(body), headers=headers
     ).json()
-    token = resp_json["token"]
+    return resp_json
 
+
+def get_init_token(endpoint: str = "/nj-booking-ocp/init/start") -> str:
+    token = request_start(endpoint)["token"]
     dprint(f"Received init token: {token}")
     return token
 
@@ -266,8 +269,13 @@ def notify_user(previous: Price, new: Price, channel: str) -> None:
     )
 
 
-def query(start_station: int, end_station: int, travel_date: datetime, traveller_birthdate: datetime) -> list[Price]:
-    token = request_init_token()
+def query(
+    start_station: int,
+    end_station: int,
+    travel_date: datetime,
+    traveller_birthdate: datetime,
+) -> list[Price]:
+    token = get_init_token()
     connections = request_connections(token, start_station, end_station, travel_date)
     booking_requests = connection_data_to_booking_requests(connections, traveller_birthdate=traveller_birthdate)
     bookings = [request_bookings(token, req) for req in booking_requests]
