@@ -18,43 +18,62 @@ Most options should be pretty self-explanatory, but a few notes:
 - You can use the price snapshots, if you decide to create them with `dump-price-snapshot`, to create pretty time series graphs
 - Currently, we _only_ support `ntfy`, as well as the official `ntfy` server as the notification channel
 
-```help
- Usage: nightjet [OPTIONS] TRAVEL_DATE
+```sh
+ Usage: nightjet [OPTIONS] COMMAND [ARGS]...
+
+╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ --install-completion          Install completion for the current shell.                                             │
+│ --show-completion             Show completion for the current shell, to copy it or customize the installation.      │
+│ --help                        Show this message and exit.                                                           │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭─ Commands ──────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ query      Check the (lowest) prices for a single connection.                                                       │
+│ lastdate   Check for the currently latest possible booking date.                                                    │
+╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+ ```
+
+```sh
+ Usage: nightjet query [OPTIONS] TRAVEL_DATE
+
+ Check the (lowest) prices for a single connection.
+
+ Will run repeatedly or one-shot and query the prices for a specific connection. Can be set to output all available
+ prices or just output the lowest found. Outputs will (curently) always be given as csv files.
 
 ╭─ Arguments ─────────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ *    travel_date      TEXT  Travel day to search from. (YYYY-MM-DD) [default: None] [required]                      │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ╭─ Options ───────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ --start-station                                         INTEGER  Departure station number. (default: Berlin Hbf)    │
-│                                                                  [default: 8096003]                                 │
-│ --end-station                                           INTEGER  Destination station number. (default: Paris Est)   │
-│                                                                  [default: 8796001]                                 │
-│ --birthdate                                             TEXT     Traveller birthdate, may be important for          │
-│                                                                  discounts. (YYYY-MM-DD)                            │
-│                                                                  [default: 1990-01-01]                              │
-│ --notification-channel                                  TEXT     ntfy channel to inform user on.                    │
-│                                                                  [default: nightjet-price-notifier]                 │
-│ --monitor-mode              --no-monitor-mode                    Run queries repeatedly over time. If False only    │
-│                                                                  runs a single query (oneshot mode).                │
-│                                                                  [default: monitor-mode]                            │
-│ --monitor-frequency                                     INTEGER  How often to run price queries if in monitoring    │
-│                                                                  mode, in seconds.                                  │
-│                                                                  [default: 3600]                                    │
-│ --base-output-directory                                 PATH     Directory in which to output all result files.     │
-│                                                                  [default: out]                                     │
-│ --lowest-prices-filename                                TEXT     Filename for collecting lowest found prices.       │
-│                                                                  [default: lowest.csv]                              │
-│ --price-snapshot-pattern                                TEXT     Filename pattern for saving all prices of each     │
-│                                                                  query. Takes %%DATE%% as pattern to replace with   │
-│                                                                  current unix timestamp.                            │
-│                                                                  [default: all_prices_%%DATE%%.csv]                 │
-│ --dump-price-snapshot       --no-dump-price-snapshot             Dump _all_ queried prices into a timestamped csv   │
-│                                                                  file.                                              │
-│                                                                  [default: dump-price-snapshot]                     │
-│ --install-completion                                             Install completion for the current shell.          │
-│ --show-completion                                                Show completion for the current shell, to copy it  │
-│                                                                  or customize the installation.                     │
-│ --help                                                           Show this message and exit.                        │
+│ --start-station                                          INTEGER  Departure station number. (default: Berlin Hbf)   │
+│                                                                   [default: 8096003]                                │
+│ --end-station                                            INTEGER  Destination station number. (default: Paris Est)  │
+│                                                                   [default: 8796001]                                │
+│ --birthdate                                              TEXT     Traveller birthdate, may be important for         │
+│                                                                   discounts. (YYYY-MM-DD)                           │
+│                                                                   [default: 1990-01-01]                             │
+│ --notification-channel                                   TEXT     ntfy channel to inform user on.                   │
+│                                                                   [default: nightjet-price-notifier]                │
+│ --monitor-mode              --no-monitor-mode                     Run queries repeatedly over time. If False only   │
+│                                                                   runs a single query (oneshot mode).               │
+│                                                                   [default: monitor-mode]                           │
+│ --monitor-frequency                                      INTEGER  How often to run price queries if in monitoring   │
+│                                                                   mode, in seconds.                                 │
+│                                                                   [default: 3600]                                   │
+│ --base-output-directory                                  PATH     Directory in which to output all result files.    │
+│                                                                   [default: out]                                    │
+│ --lowest-prices-filename                                 TEXT     Filename for collecting lowest found prices.      │
+│                                                                   [default: lowest.csv]                             │
+│ --price-snapshot-pattern                                 TEXT     Filename pattern for saving all prices of each    │
+│                                                                   query. Takes %%DATE%% as pattern to replace with  │
+│                                                                   current unix timestamp.                           │
+│                                                                   [default: all_prices_%%DATE%%.csv]                │
+│ --dump-price-snapshot       --no-dump-price-snapshot              Dump _all_ queried prices into a timestamped csv  │
+│                                                                   file.                                             │
+│                                                                   [default: dump-price-snapshot]                    │
+│ --latest-bookable-date      --no-latest-bookable-date             Check for latest currently possible booking date  │
+│                                                                   only.                                             │
+│                                                                   [default: no-latest-bookable-date]                │
+│ --help                                                            Show this message and exit.                       │
 ╰─────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
 ```
 
@@ -83,3 +102,6 @@ Here are a bunch of things I think should definitely be considered for further w
 
 5. Support more notification channels. This should be self-explanatory, and could probably be pretty
   easily be improved with a library like [apprise](https://github.com/caronc/apprise?tab=readme-ov-file#developer-api-usage).
+
+6. Support simple stdout responses. We always dump to csv files for the price queries currently,
+   this definitely needs to change.
