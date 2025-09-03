@@ -1,7 +1,8 @@
 import csv
 import json
+import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 from time import sleep
 from typing import Annotated, Any
@@ -287,6 +288,13 @@ def query(
     return prices
 
 
+def query_max_booking_date(endpoint: str = "/nj-booking-ocp/init/start") -> date | None:
+    latest_date = request_start().get("maxBookableDate")
+    if not latest_date:
+        return None
+    return date.fromisoformat(latest_date)
+
+
 ## CLI
 app = typer.Typer()
 
@@ -330,7 +338,17 @@ def main(
     dump_price_snapshot: bool = typer.Option(
         True, help="Dump _all_ queried prices into a timestamped csv file."
     ),
+    latest_bookable_date: bool = typer.Option(
+        False, help="Check for latest currently possible booking date only."
+    ),
 ):
+    if latest_bookable_date:
+        latest_date = query_max_booking_date()
+        if not latest_date:
+            dprint("Could not determine max bookable date.")
+        dprint(f"Latest currently bookable date: {latest_date}")
+        sys.exit(0)
+
     base_output_directory.mkdir(exist_ok=True, parents=True)
     lowest_prices_path = base_output_directory.joinpath(lowest_prices_filename)
     price_snapshot_path = base_output_directory.joinpath(price_snapshot_pattern)
