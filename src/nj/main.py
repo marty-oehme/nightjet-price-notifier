@@ -8,6 +8,7 @@ from typing import Annotated, Any
 
 import requests
 import typer
+from rich import print
 
 BASE_URL = "https://www.nightjet.com"
 BASE_DIR = "out"
@@ -277,7 +278,9 @@ def query(
 ) -> list[Price]:
     token = get_init_token()
     connections = request_connections(token, start_station, end_station, travel_date)
-    booking_requests = connection_data_to_booking_requests(connections, traveller_birthdate=traveller_birthdate)
+    booking_requests = connection_data_to_booking_requests(
+        connections, traveller_birthdate=traveller_birthdate
+    )
     bookings = [request_bookings(token, req) for req in booking_requests]
     prices = extract_prices(bookings)
 
@@ -299,7 +302,10 @@ def main(
     end_station: int = typer.Option(
         END_STATION, help="Destination station number. (default: Paris Est)"
     ),
-    birthdate: str = typer.Option(TRAVELLER_BIRTHDATE.strftime("%Y-%m-%d"), help="Traveller birthdate, may be important for discounts. (YYYY-MM-DD)"),
+    birthdate: str = typer.Option(
+        TRAVELLER_BIRTHDATE.strftime("%Y-%m-%d"),
+        help="Traveller birthdate, may be important for discounts. (YYYY-MM-DD)",
+    ),
     notification_channel: str = typer.Option(
         NOTIFICATION_CHANNEL, help="ntfy channel to inform user on."
     ),
@@ -338,7 +344,10 @@ def main(
 
     while True:
         prices = query(
-            start_station=start_station, end_station=end_station, travel_date=travel_date_obj, traveller_birthdate=birth_date_obj,
+            start_station=start_station,
+            end_station=end_station,
+            travel_date=travel_date_obj,
+            traveller_birthdate=birth_date_obj,
         )
 
         # create a snapshot of all current prices
